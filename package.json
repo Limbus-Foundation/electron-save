@@ -1,0 +1,25 @@
+{
+  "name": "@limbusfoundation/electronsave",
+  "version": "1.0.0",
+  "description": "Save Electron app data locally as JSON.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Limbus-Foundation/electron-save.git"
+  },
+  "keywords": [
+    "electron",
+    "nodejs",
+    "json",
+    "savedata"
+  ],
+  "author": "Limbus Foundation",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Limbus-Foundation/electron-save/issues"
+  },
+  "homepage": "https://github.com/Limbus-Foundation/electron-save#readme"
+}
