@@ -1,77 +1,67 @@
 
-
-
-
-
-
-
-
-
 const ElectronSave = require("../index.js");
 
-// Criando instância e definindo o caminho do arquivo
+// Creating an instance and setting the file path
 const save = new ElectronSave("C:\\Users\\Rhyan Eduardo\\Desktop\\myfileconfig.json", { type: "json" });
 
-console.log("Caminho do arquivo: " + save.getPath());
+console.log("File path: " + save.getPath());
 
-// Definir chave de criptografia (deve ter 32 caracteres)
+// Setting the encryption key (must be 32 characters)
 const encryptionKey = "0123456789abcdef0123456789abcdef";
 save.setEncryptionKey(encryptionKey);
 
-// Definir esquema de validação
+// Setting the validation schema
 save.setSchema({
     type: "object",
     properties: {
-        nome: { type: "string" },
-        idade: { type: "integer", minimum: 27 }  // Restrição mínima para a idade
+        name: { type: "string" },
+        age: { type: "integer", minimum: 27 }  // Minimum restriction for age
     },
-    required: ["nome", "idade"]
+    required: ["name", "age"]
 });
 
-// Salvar dados primeiro, garantindo que "idade" seja salva antes da validação
-save.set("nome", "Rhyan");
-save.set("idade", 30); // Agora, "idade" é configurada corretamente
+// Saving data, ensuring that "age" is saved before validation
+save.set("name", "Rhyan");
+save.set("age", 30); // Now, "age" is correctly set
 
-// Verificar e logar os dados
-console.log("Nome salvo: " + save.get("nome"));
-console.log("Idade salva: " + save.get("idade"));
+// Check and log the data
+console.log("Name saved: " + save.get("name"));
+console.log("Age saved: " + save.get("age"));
 
-// Forçar validação após salvar
-
+// Force validation after saving
 setTimeout(() => {
-    const validationErrors = save.validate(); // Supondo que exista um método de validação
-if (validationErrors) {
-    console.log("Erro de validação:", validationErrors);
-} else {
-    console.log("Validação bem-sucedida!");
-}
+    const validationErrors = save.validate(); // Assuming there is a validation method
+    if (validationErrors) {
+        console.log("Validation error:", validationErrors);
+    } else {
+        console.log("Validation successful!");
+    }
 }, 3000);
 
-
-// Adicionar um listener para mudanças
-save.onChange("nome", (newValue) => {
-    console.log("Nome atualizado para: " + newValue);
+// Adding a listener for changes
+save.onChange("name", (newValue) => {
+    console.log("Name updated to: " + newValue);
 });
 
-// Atualizar valor de "nome"
-save.set("nome", "Eduardo");
+// Updating the "name" value
+save.set("name", "Eduardo");
 
-// Criar backup do arquivo
+// Creating a backup of the file
 const backupPath = save.backup();
-console.log("Backup criado em: " + backupPath);
+console.log("Backup created at: " + backupPath);
 
-// Restaurar backup
+// Restoring the backup
 const timestamp = '03-20-2025-05-55-44';
 save.restore(timestamp);
-console.log("Backup restaurado.");
+console.log("Backup restored.");
 
-// Testar criptografia e descriptografia
-const encryptedData = save.mask({ nome: "Rhyan", idade: 25 });
-console.log("Dados criptografados: " + encryptedData);
+// Testing encryption and decryption
+const encryptedData = save.mask({ name: "Rhyan", age: 25 });
+console.log("Encrypted data: " + encryptedData);
 
 const decryptedData = save.unmask(encryptedData);
-console.log("Dados descriptografados:", decryptedData);
+console.log("Decrypted data:", decryptedData);
 
-// Limpar todos os dados do arquivo
+// Clearing all data from the file
 // save.clear();
-// console.log("Todos os dados foram apagados.");
+// console.log("All data has been cleared.");
