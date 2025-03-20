@@ -107,9 +107,9 @@ class ElectronSave {
         this._notifyObservers(key, value);
     }
 
-    get(key) {
+    get(key, defaultValue = null) {
         const data = this._readData();
-        return data[key];
+        return data[key] !== undefined ? data[key] : defaultValue;
     }
 
     delete(key) {
