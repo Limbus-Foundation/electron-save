@@ -15,9 +15,50 @@ class ElectronSave {
         this._ensureFileExists();
     }
 
-    static pathDefine(customPath) {
-        this.prototype.filePath = customPath || path.join(os.homedir(), "appConfig.json");
-        this.prototype._ensureFileExists();
+    setPath(pathtojson) {
+        if (!path.isAbsolute(pathtojson)) {
+            throw new Error("O caminho deve ser absoluto!");
+        }
+        this.filePath = pathtojson || path.join(os.homedir(), "appConfig.json");
+        this._ensureFileExists();
+    }
+
+    getPath() {
+        return this.filePath;
+    }
+
+    backup(pathtoBackup) {
+        const backupDir = pathtoBackup || path.join(path.dirname(this.filePath), "appBackup");
+        if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+
+        const now = new Date();
+        const timestamp = [
+            String(now.getMonth() + 1).padStart(2, "0"), 
+            String(now.getDate()).padStart(2, "0"), 
+            now.getFullYear(), 
+            String(now.getHours()).padStart(2, "0"), 
+            String(now.getMinutes()).padStart(2, "0"), 
+            String(now.getSeconds()).padStart(2, "0") 
+        ].join("-");
+
+        const backupFile = path.join(backupDir, `backup-${timestamp}.json`);
+
+        fs.copyFileSync(this.filePath, backupFile);
+        console.log("Backup criado em:", backupFile);
+    }
+
+    restore(timestamp) {
+        const backupDir = path.join(path.dirname(this.filePath), "appBackup");
+        const backupFile = path.join(backupDir, `backup-${timestamp}.json`);
+
+        if (!fs.existsSync(backupFile)) {
+            console.log("Backup não encontrado:", backupFile);
+            return;
+        }
+
+        fs.copyFileSync(backupFile, this.filePath);
+
+        console.log("Backup restaurado:", backupFile);
     }
 
     set(key, value) {
@@ -67,3 +108,6 @@ class ElectronSave {
 }
 
 module.exports = ElectronSave;
+
+
+
