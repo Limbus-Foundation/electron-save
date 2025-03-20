@@ -1,6 +1,6 @@
 {
   "name": "@limbusfoundation/electronsave",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Save Electron app data locally as JSON.",
   "main": "index.js",
   "scripts": {
