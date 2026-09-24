@@ -1,33 +1,48 @@
 {
-  "name": "@limbusfoundation/electronsave",
-  "version": "2.2.0",
-  "description": "Save Electron app data locally as JSON.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Limbus-Foundation/electron-save.git"
-  },
-  "keywords": [
-    "electron",
-    "nodejs",
-    "json",
-    "savedata"
-  ],
-  "author": "Limbus Foundation",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/Limbus-Foundation/electron-save/issues"
-  },
-  "homepage": "https://github.com/Limbus-Foundation/electron-save#readme",
-  "dependencies": {
-    "@iarna/toml": "^2.2.5",
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1",
-    "js-yaml": "^4.1.0",
-    "toml": "^3.0.0",
-    "yaml": "^2.7.0"
-  }
+    "name": "@limbusfoundation/electronsave",
+    "version": "3.0.0",
+    "description": "Save Electron app data locally",
+    "type": "module",
+    "types": "./dist/electron-save.d.ts",
+    "main": "./dist/electron-save.js",
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "node test/index.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Limbus-Foundation/electron-save.git"
+    },
+    "keywords": [
+        "electron",
+        "nodejs",
+        "json",
+        "savedata"
+    ],
+    "author": "Limbus Foundation",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/Limbus-Foundation/electron-save/issues"
+    },
+    "homepage": "https://github.com/Limbus-Foundation/electron-save#readme",
+    "dependencies": {
+        "@iarna/toml": "^2.2.5",
+        "ajv": "^8.17.1",
+        "js-yaml": "^4.1.0"
+    },
+    "devDependencies": {
+        "@types/js-yaml": "^4.0.9",
+        "@types/node": "^26.6.2",
+        "typescript": "^7.0.2"
+    },
+    "exports": {
+        ".": {
+            "types": "./dist/electron-save.d.ts",
+            "import": "./dist/electron-save.js"
+        }
+    }
 }
