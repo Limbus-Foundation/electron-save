@@ -1,13 +1,12 @@
-
 ![ElectronSave](https://github.com/user-attachments/assets/3c30a01c-628c-4cf5-a18e-9176ff4f0de8)
 
 # ElectronSave
 
-Save Electron (or any other Node.js app) data locally as JSON.
+Save Electron (or any other Node.js app) data locally using JSON, YAML, or TOML.
 
 ## Installation
 
-To install ElectronSave, use npm:
+Install ElectronSave using npm:
 
 ```sh
 npm install @limbusfoundation/electronsave
@@ -15,266 +14,379 @@ npm install @limbusfoundation/electronsave
 
 ## Usage
 
-Import the module and create an instance:
+ElectronSave uses ES Modules and provides a named `ElectronSave` export:
 
 ```javascript
-const ElectronSave = require("@limbusfoundation/electronsave");
+import { ElectronSave } from "@limbusfoundation/electronsave";
+
 const config = new ElectronSave();
 ```
 
-By default, the configuration file is stored in the user's home directory as `appConfig.json`. You can specify a custom path:
+By default, the configuration file is stored in the user's home directory as `appConfig.json`.
+
+You can specify a custom path and file format:
 
 ```javascript
-config.setPath("/absolute/path/to/config.json");
+const config = new ElectronSave("./config.json", {
+    type: "json"
+});
 ```
 
-### Methods
+Supported file types:
 
-#### `setPath(newPath)`
+* `json`
+* `yaml`
+* `toml`
+
+You can also configure a schema and encryption key when creating the instance:
+
+```javascript
+const config = new ElectronSave("./config.json", {
+    type: "json",
+    schema: {
+        type: "object"
+    },
+    encryptionKey: "0123456789abcdef0123456789abcdef"
+});
+```
+
+## Methods
+
+### `setPath(newPath)`
 
 Sets a custom path for the configuration file.
 
-- `newPath` (string) - Must be an absolute path.
+* `newPath` (`string`) - Path to the configuration file.
 
-#### `getPath()`
+```javascript
+config.setPath("./config.json");
+```
 
-Returns the current path of the configuration file.
+### `getPath()`
 
-#### `setEncryptionKey(key)`
+Returns the current configuration file path.
 
-Sets an encryption key for secure storage.
+```javascript
+const path = config.getPath();
 
-- `key` (string) - Must be 32 characters long.
+console.log(path);
+```
 
-#### `setSchema(schema)`
+### `setEncryptionKey(key)`
 
-Sets a JSON schema for validating the configuration file data.
+Sets the encryption key used by `mask()` and `unmask()`.
 
-- `schema` (object) - JSON schema object.
+* `key` (`string`) - Must contain exactly 32 characters.
 
-#### `set(key, value)`
+```javascript
+config.setEncryptionKey("0123456789abcdef0123456789abcdef");
+```
 
-Saves a key-value pair in the configuration file.
+### `setSchema(schema)`
 
-- `key` (string) - The property name.
-- `value` (any) - The value to store.
+Sets a JSON Schema used to validate the configuration data.
 
-**Example:**
+* `schema` (`object`) - JSON Schema object.
+
+```javascript
+config.setSchema({
+    type: "object",
+    properties: {
+        name: { type: "string" },
+        age: { type: "integer" }
+    },
+    required: ["name", "age"]
+});
+```
+
+### `set(key, value)`
+
+Saves a key-value pair to the configuration file.
+
+* `key` (`string`) - The property name.
+* `value` (`any`) - The value to store.
+
+`set()` persists data without automatically validating the entire document against the schema.
 
 ```javascript
 config.set("theme", "dark");
-config.set("user", { name: "John", age: 30 });
+
+config.set("user", {
+    name: "John",
+    age: 30
+});
 ```
 
-#### `get(key,dafaultValue)`
+### `get(key, defaultValue)`
 
 Retrieves a value from the configuration file.
 
-- `key` (string) - The property name.
-- `defaultValue` (any) - a value to return if the key is not found.
-
-**Example:**
+* `key` (`string`) - The property name.
+* `defaultValue` (`any`) - Value returned when the key does not exist.
 
 ```javascript
 const theme = config.get("theme", "light");
-console.log(theme); // Outputs: "dark"
+
+console.log(theme);
 ```
 
-#### `delete(key)`
+### `delete(key)`
 
 Removes a key from the configuration file.
 
-- `key` (string) - The property name to delete.
-
-**Example:**
+* `key` (`string`) - The property name to delete.
 
 ```javascript
 config.delete("theme");
 ```
 
-#### `clear()`
+### `clear()`
 
 Removes all data from the configuration file.
-
-**Example:**
 
 ```javascript
 config.clear();
 ```
 
-#### `backup()`
+### `validate()`
+
+Validates the current configuration data against the schema configured with `setSchema()`.
+
+Returns:
+
+* `null` when the data is valid or no schema is configured.
+* An array of AJV `ErrorObject`s when validation fails.
+
+```javascript
+const errors = config.validate();
+
+if(errors) {
+    console.log("Validation error:", errors);
+} else {
+    console.log("Validation successful!");
+}
+```
+
+Example:
+
+```javascript
+const config = new ElectronSave("./config.json");
+
+config.setSchema({
+    type: "object",
+    properties: {
+        name: { type: "string" },
+        age: { type: "integer", minimum: 18 }
+    },
+    required: ["name", "age"]
+});
+
+config.set("name", "Rhyan");
+config.set("age", 23);
+
+const errors = config.validate();
+
+if(errors) {
+    console.log("Validation error:", errors);
+}
+```
+
+### `backup()`
 
 Creates a backup of the current configuration file.
 
-- The backup file is saved with a timestamp format: `backup-MM-DD-YYYY-HH-MM-SS.json`.
+Backups are stored in an `appBackup` directory next to the configuration file.
 
-**Example:**
+The filename uses the following format:
 
-```javascript
-config.backup(); // Saves backup to default location
+```text
+backup-MM-DD-YYYY-HH-MM-SS.<fileType>
 ```
 
-#### `restore(timestamp)`
+For example:
 
-Restores a backup from the given timestamp.
-
-- `timestamp` (string) - The timestamp portion of the backup filename, formatted as `MM-DD-YYYY-HH-MM-SS`.
-
-**Example:**
-
-```javascript
-config.restore("03-20-2025-14-30-00"); // Restores from 'backup-03-20-2025-14-30-00.json'
+```text
+appBackup/backup-09-24-2026-03-05-58.json
 ```
 
-#### `onChange(key, callback)`
+```javascript
+const backupPath = config.backup();
 
-Adds an observer for a key. The callback will be triggered when the key changes.
+console.log("Backup created at:", backupPath);
+```
 
-- `key` (string) - The property name.
-- `callback` (function) - The function to call when the key changes.
+### `restore(timestamp)`
 
-**Example:**
+Restores a backup using its timestamp.
+
+* `timestamp` (`string`) - Timestamp portion of the backup filename.
+
+```javascript
+config.restore("09-24-2026-03-05-58");
+```
+
+The backup extension automatically follows the configured file type.
+
+### `onChange(key, callback)`
+
+Adds an observer for a specific key.
+
+* `key` (`string`) - The property name.
+* `callback` (`function`) - Function called when the key is updated.
 
 ```javascript
 config.onChange("theme", (newValue) => {
     console.log(`Theme changed to: ${newValue}`);
 });
+
+config.set("theme", "dark");
 ```
 
-#### `mask(data)`
+### `mask(data)`
 
-Encrypts the data using the AES-256-CBC algorithm.
+Encrypts data using AES-256-CBC.
 
-- `data` (any) - The data to encrypt.
+* `data` (`any`) - Data to encrypt.
 
-**Example:**
+An encryption key must be configured before using this method.
 
 ```javascript
-const encrypted = config.mask({ sensitive: "data" });
+config.setEncryptionKey("0123456789abcdef0123456789abcdef");
+
+const encryptedData = config.mask({
+    sensitive: "data"
+});
+
+console.log(encryptedData);
 ```
 
-#### `unmask(encryptedData)`
+### `unmask(encryptedData)`
 
-Decrypts the data using the AES-256-CBC algorithm.
+Decrypts data previously encrypted with `mask()`.
 
-- `encryptedData` (string) - The encrypted data to decrypt.
-
-**Example:**
+* `encryptedData` (`string`) - Encrypted data.
 
 ```javascript
-const decrypted = config.unmask(encryptedData);
+const decryptedData = config.unmask(encryptedData);
+
+console.log(decryptedData);
 ```
 
-## Learn Schema Validation 
+## Schema Validation
 
-### JSON Schema Validation Types
+ElectronSave uses [AJV](https://ajv.js.org/) for JSON Schema validation.
 
-1. **Type Validations:**
-   - `"type": "string"`
-   - `"type": "number"`
-   - `"type": "integer"`
-   - `"type": "boolean"`
-   - `"type": "object"`
-   - `"type": "array"`
-   - `"type": "null"`
-   - `"type": "any"`
+Schemas can be used to validate:
 
-2. **String Validation:**
-   - `"minLength": <number>` – Minimum length of the string.
-   - `"maxLength": <number>` – Maximum length of the string.
-   - `"pattern": <regex>` – The string must match the regular expression.
+* Strings
+* Numbers
+* Integers
+* Booleans
+* Objects
+* Arrays
+* Null values
+* Required properties
+* String lengths
+* Numeric ranges
+* Regular expressions
+* Array sizes
+* Unique array items
+* Enumerations
+* Conditional schemas
+* Additional properties
 
-3. **Number Validation:**
-   - `"minimum": <number>` – Minimum value of the number.
-   - `"maximum": <number>` – Maximum value of the number.
-   - `"exclusiveMinimum": <number>` – Exclusive minimum value (greater than the specified number).
-   - `"exclusiveMaximum": <number>` – Exclusive maximum value (less than the specified number).
-   - `"multipleOf": <number>` – The number must be a multiple of the specified value.
+### Example Schema
 
-4. **Array Validation:**
-   - `"minItems": <number>` – Minimum number of items in the array.
-   - `"maxItems": <number>` – Maximum number of items in the array.
-   - `"uniqueItems": true` – All items in the array must be unique.
-
-5. **Object Validation:**
-   - `"properties": {}` – Define properties for objects and their types.
-   - `"required": [<propertyName>]` – Specifies required properties for an object.
-   - `"additionalProperties": false` – Disallow properties that are not defined in `properties`.
-
-6. **Enum Validation:**
-   - `"enum": [<value1>, <value2>, ...]` – The value must be one of the listed options.
-
-7. **Conditional Validation:**
-   - `"if"`, `"then"`, `"else"` – Conditional validation based on the value of another property.
-   Example:
-   ```json
-   {
-     "if": {
-       "properties": { "status": { "const": "active" } }
-     },
-     "then": {
-       "properties": { "activationDate": { "type": "string" } }
-     },
-     "else": {
-       "properties": { "activationDate": { "type": "null" } }
-     }
-   }
-
-
-### `setSchema(schema)`
-
-Defines a JSON schema to validate the configuration file data.
-
-#### Validation process:
-1. **Schema definition**: The schema specifies the structure, data types, and required fields for the configuration.
-   Example:
-   ```json
-   {
-     "type": "object",
-     "properties": {
-       "theme": { "type": "string" },
-       "user": {
-         "type": "object",
-         "properties": {
-           "name": { "type": "string" },
-           "age": { "type": "integer" }
-         },
-         "required": ["name", "age"]
-       }
-     },
-     "required": ["theme", "user"]
-   }
-   ```
-
-2. **Validation**: When saving data with `set(key, value)`, the data is validated against the schema. If invalid (wrong type, missing fields), it won't be saved, and an error is logged.
-
-3. **Error handling**: If validation fails, the error details are available in `validate.errors` from the `Ajv` validator.
-
-#### Example:
 ```javascript
-const config = new ElectronSave();
 const schema = {
-  type: "object",
-  properties: {
-    theme: { type: "string" }
-  },
-  required: ["theme"]
+    type: "object",
+    properties: {
+        theme: {
+            type: "string"
+        },
+        user: {
+            type: "object",
+            properties: {
+                name: {
+                    type: "string"
+                },
+                age: {
+                    type: "integer"
+                }
+            },
+            required: ["name", "age"]
+        }
+    },
+    required: ["theme", "user"]
 };
 
 config.setSchema(schema);
-config.set("theme", 123); // Error: "theme" must be a string
 ```
 
-#### Benefits:
-- Ensures data integrity by enforcing structure and type constraints.
-- Prevents invalid data from being saved in the configuration file.
+### Validation
 
+Schema validation is performed explicitly using `validate()`.
+
+```javascript
+config.set("theme", "dark");
+
+config.set("user", {
+    name: "John",
+    age: 30
+});
+
+const errors = config.validate();
+
+if(errors) {
+    console.log("Validation error:", errors);
+} else {
+    console.log("Validation successful!");
+}
+```
+
+This allows data to be built incrementally before validating the complete configuration.
+
+## File Formats
+
+ElectronSave supports three configuration formats:
+
+### JSON
+
+```javascript
+const config = new ElectronSave("./config.json", {
+    type: "json"
+});
+```
+
+### YAML
+
+```javascript
+const config = new ElectronSave("./config.yaml", {
+    type: "yaml"
+});
+```
+
+### TOML
+
+```javascript
+const config = new ElectronSave("./config.toml", {
+    type: "toml"
+});
+```
+
+Backups automatically use the configured file extension.
 
 ## Notes
-- Ensure the file path set with `setPath()` is absolute.
-- Backups are stored using a timestamp format.
-- When restoring a backup, the existing configuration file is completely replaced with the backup content.
-- Encryption key must be defined for masking/unmasking functionality.
+
+* The default configuration path is `<user-home>/appConfig.json`.
+* Custom paths can be provided through the constructor or `setPath()`.
+* JSON, YAML, and TOML are supported.
+* `set()` persists data without performing schema validation.
+* `validate()` explicitly validates the current configuration against the configured schema.
+* Backups are stored inside an `appBackup` directory next to the configuration file.
+* Restoring a backup completely replaces the current configuration file.
+* An encryption key must contain exactly 32 characters before using `mask()` or `unmask()`.
+* `mask()` and `unmask()` use AES-256-CBC.
 
 ## License
 
