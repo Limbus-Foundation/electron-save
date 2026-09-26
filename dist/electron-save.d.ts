@@ -21,6 +21,9 @@ export declare class ElectronSave {
     validate(): ErrorObject[] | null;
     private _readData;
     private _writeData;
+    private _splitKey;
+    private _getNested;
+    private _getParent;
     set(key: string, value: any): void;
     get<T = any>(key: string, defaultValue?: T | null): T | null;
     delete(key: string): void;
@@ -31,5 +34,7 @@ export declare class ElectronSave {
     restore(timestamp: string): void;
     mask(data: any): string;
     unmask<T = any>(encryptedData: string): T;
+    push<T = any>(key: string, index: number, value: T): void;
+    pop<T = any>(key: string, index: number): T | undefined;
 }
 export {};

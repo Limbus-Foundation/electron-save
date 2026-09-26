@@ -120,30 +120,87 @@ export class ElectronSave {
         }
     }
 
+    private _splitKey(key: string): string[] {
+        const keys = key.split(".");
+
+        if(keys.some(part => !part || ["__proto__", "prototype", "constructor"].includes(part))) {
+            throw new Error("Invalid key path");
+        }
+
+        return keys;
+    };
+
+    private _getNested(data: Record<string, any>, key: string): any {
+        const keys = this._splitKey(key);
+        let current: any = data;
+
+        for(const part of keys) {
+            if(current === null || typeof current !== "object" || !Object.prototype.hasOwnProperty.call(current, part)) return undefined;
+            current = current[part];
+        }
+
+        return current;
+    };
+
+    private _getParent(data: Record<string, any>, key: string, create: boolean): { parent: any, property: string } | null {
+        const keys = this._splitKey(key);
+        const property = keys.pop()!;
+        let current: any = data;
+
+        for(const part of keys) {
+            if(current === null || typeof current !== "object") return null;
+
+            if(!Object.prototype.hasOwnProperty.call(current, part)) {
+                if(!create) return null;
+                current[part] = {};
+            }
+
+            if(current[part] === null || typeof current[part] !== "object") {
+                if(!create) return null;
+                throw new TypeError(`"${part}" is not an object`);
+            }
+
+            current = current[part];
+        }
+
+        return { parent: current, property };
+    };
+
     public set(key: string, value: any): void {
         const data = this._readData();
+        const target = this._getParent(data, key, true);
 
-        data[key] = value;
+        if(!target) throw new Error(`Invalid key path: "${key}"`);
+
+        target.parent[target.property] = value;
 
         console.log(`Saving data: ${JSON.stringify(data)}`);
 
         this._writeData(data);
         this._notifyObservers(key, value);
-    }
+    };
 
     public get<T = any>(key: string, defaultValue: T | null = null): T | null {
         const data = this._readData();
+        const value = this._getNested(data, key);
 
-        return data[key] !== undefined ? data[key] as T : defaultValue;
-    }
+        return value !== undefined ? value as T : defaultValue;
+    };
 
     public delete(key: string): void {
         const data = this._readData();
+        const target = this._getParent(data, key, false);
 
-        delete data[key];
+        if(!target) return;
+
+        if(Array.isArray(target.parent) && /^(0|[1-9]\d*)$/.test(target.property)) {
+            target.parent.splice(Number(target.property), 1);
+        } else {
+            delete target.parent[target.property];
+        }
 
         this._writeData(data);
-    }
+    };
 
     public clear(): void {
         this._writeData({});
@@ -228,4 +285,31 @@ export class ElectronSave {
 
         return JSON.parse(decrypted) as T;
     };
+
+    
+    public push<T = any>(key: string, index: number, value: T): void {
+
+        const array = this.get<T[]>(key, []);
+
+        if(!Array.isArray(array)) throw new TypeError(`"${key}" is not an array`);
+        if(!Number.isInteger(index) || index < 0 || index > array.length) throw new RangeError("Invalid array index");
+
+        array.splice(index, 0, value);
+        this.set(key, array);
+    };
+
+    public pop<T = any>(key: string, index: number): T | undefined {
+
+        const array = this.get<T[]>(key, []);
+
+        if(!Array.isArray(array)) throw new TypeError(`"${key}" is not an array`);
+        if(!Number.isInteger(index) || index < 0 || index >= array.length) return undefined;
+
+        const [removed] = array.splice(index, 1);
+
+        this.set(key, array);
+
+        return removed;
+    };
+
 };

@@ -101,12 +101,12 @@ config.setSchema({
 
 ### `set(key, value)`
 
-Saves a key-value pair to the configuration file.
+Saves a value to the configuration file.
 
-* `key` (`string`) - The property name.
-* `value` (`any`) - The value to store.
+* `key` (`string`) - Property name or nested property path.
+* `value` (`any`) - Value to store.
 
-`set()` persists data without automatically validating the entire document against the schema.
+Nested keys can be accessed using `.` as a separator. Missing intermediate objects are created automatically.
 
 ```javascript
 config.set("theme", "dark");
@@ -115,30 +115,71 @@ config.set("user", {
     name: "John",
     age: 30
 });
+
+config.set("user.preferences.language", "en");
+config.set("user.preferences.notifications", true);
 ```
+
+The resulting configuration can be:
+
+```json
+{
+    "theme": "dark",
+    "user": {
+        "name": "John",
+        "age": 30,
+        "preferences": {
+            "language": "en",
+            "notifications": true
+        }
+    }
+}
+```
+
+`set()` persists data without automatically validating the entire document against the schema.
 
 ### `get(key, defaultValue)`
 
 Retrieves a value from the configuration file.
 
-* `key` (`string`) - The property name.
+* `key` (`string`) - Property name or nested property path.
 * `defaultValue` (`any`) - Value returned when the key does not exist.
 
 ```javascript
 const theme = config.get("theme", "light");
 
+const language = config.get("user.preferences.language", "en");
+
 console.log(theme);
+console.log(language);
+```
+
+Nested array items can also be accessed using numeric path segments:
+
+```javascript
+const firstItem = config.get("items.0");
+const firstItemName = config.get("items.0.name");
 ```
 
 ### `delete(key)`
 
-Removes a key from the configuration file.
+Removes a property from the configuration file.
 
-* `key` (`string`) - The property name to delete.
+* `key` (`string`) - Property name or nested property path.
 
 ```javascript
 config.delete("theme");
+
+config.delete("user.preferences.notifications");
 ```
+
+Array items can also be removed using nested paths:
+
+```javascript
+config.delete("items.0");
+```
+
+When deleting an array item through a numeric path, the remaining items are shifted automatically.
 
 ### `clear()`
 
@@ -147,6 +188,62 @@ Removes all data from the configuration file.
 ```javascript
 config.clear();
 ```
+
+### `push(key, index, value)`
+
+Inserts a value into an array at a specific index.
+
+* `key` (`string`) - Property name or nested property path containing an array.
+* `index` (`number`) - Index where the value should be inserted.
+* `value` (`any`) - Value to insert.
+
+```javascript
+config.set("items", []);
+
+config.push("items", 0, {
+    id: "1",
+    name: "First Item"
+});
+
+config.push("items", 1, {
+    id: "2",
+    name: "Second Item"
+});
+```
+
+Nested arrays are supported:
+
+```javascript
+config.set("user.preferences.tags", []);
+
+config.push("user.preferences.tags", 0, "javascript");
+config.push("user.preferences.tags", 1, "electron");
+```
+
+The index can be anywhere from `0` to the current array length.
+
+### `pop(key, index)`
+
+Removes and returns a value from an array at a specific index.
+
+* `key` (`string`) - Property name or nested property path containing an array.
+* `index` (`number`) - Index of the value to remove.
+
+```javascript
+const removedItem = config.pop("items", 0);
+
+console.log(removedItem);
+```
+
+Nested arrays are supported:
+
+```javascript
+const removedTag = config.pop("user.preferences.tags", 0);
+
+console.log(removedTag);
+```
+
+If the index is invalid, `pop()` returns `undefined`.
 
 ### `validate()`
 
@@ -231,7 +328,7 @@ The backup extension automatically follows the configured file type.
 
 Adds an observer for a specific key.
 
-* `key` (`string`) - The property name.
+* `key` (`string`) - Property name or nested property path.
 * `callback` (`function`) - Function called when the key is updated.
 
 ```javascript
@@ -240,6 +337,16 @@ config.onChange("theme", (newValue) => {
 });
 
 config.set("theme", "dark");
+```
+
+Nested keys are also supported:
+
+```javascript
+config.onChange("user.preferences.language", (newValue) => {
+    console.log("Language changed to:", newValue);
+});
+
+config.set("user.preferences.language", "pt-BR");
 ```
 
 ### `mask(data)`
@@ -271,6 +378,60 @@ const decryptedData = config.unmask(encryptedData);
 
 console.log(decryptedData);
 ```
+
+## Nested Keys
+
+ElectronSave supports dot-separated paths for accessing nested properties.
+
+```javascript
+config.set("profile.username", "rhyan");
+config.set("profile.preferences.language", "en");
+config.set("profile.preferences.notifications", true);
+
+console.log(config.get("profile.username"));
+console.log(config.get("profile.preferences.language"));
+console.log(config.get("profile.preferences.notifications"));
+```
+
+This produces:
+
+```json
+{
+    "profile": {
+        "username": "rhyan",
+        "preferences": {
+            "language": "en",
+            "notifications": true
+        }
+    }
+}
+```
+
+Nested paths also work with arrays:
+
+```javascript
+config.set("items", []);
+
+config.push("items", 0, {
+    id: "1",
+    name: "First Item"
+});
+
+config.set("items.0.name", "Updated Item");
+
+console.log(config.get("items.0.name"));
+```
+
+Nested paths are supported by:
+
+* `set()`
+* `get()`
+* `delete()`
+* `push()`
+* `pop()`
+* `onChange()`
+
+A `.` in a key is interpreted as a path separator and cannot currently be used as part of a literal property name.
 
 ## Schema Validation
 
@@ -348,7 +509,7 @@ This allows data to be built incrementally before validating the complete config
 
 ## File Formats
 
-ElectronSave supports three configuration formats:
+ElectronSave supports three configuration formats.
 
 ### JSON
 
@@ -381,12 +542,18 @@ Backups automatically use the configured file extension.
 * The default configuration path is `<user-home>/appConfig.json`.
 * Custom paths can be provided through the constructor or `setPath()`.
 * JSON, YAML, and TOML are supported.
+* Dot-separated paths can be used to access nested objects and arrays.
+* `set()` automatically creates missing intermediate objects for nested paths.
 * `set()` persists data without performing schema validation.
+* `get()` supports default values when a path does not exist.
+* `push()` inserts values into arrays at a specific index.
+* `pop()` removes and returns a value from an array at a specific index.
 * `validate()` explicitly validates the current configuration against the configured schema.
 * Backups are stored inside an `appBackup` directory next to the configuration file.
 * Restoring a backup completely replaces the current configuration file.
 * An encryption key must contain exactly 32 characters before using `mask()` or `unmask()`.
 * `mask()` and `unmask()` use AES-256-CBC.
+* A `.` in a key is interpreted as a nested path separator.
 
 ## License
 

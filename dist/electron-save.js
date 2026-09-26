@@ -91,22 +91,78 @@ export class ElectronSave {
             console.error("Error writing to file:", err);
         }
     }
+    _splitKey(key) {
+        const keys = key.split(".");
+        if (keys.some(part => !part || ["__proto__", "prototype", "constructor"].includes(part))) {
+            throw new Error("Invalid key path");
+        }
+        return keys;
+    }
+    ;
+    _getNested(data, key) {
+        const keys = this._splitKey(key);
+        let current = data;
+        for (const part of keys) {
+            if (current === null || typeof current !== "object" || !Object.prototype.hasOwnProperty.call(current, part))
+                return undefined;
+            current = current[part];
+        }
+        return current;
+    }
+    ;
+    _getParent(data, key, create) {
+        const keys = this._splitKey(key);
+        const property = keys.pop();
+        let current = data;
+        for (const part of keys) {
+            if (current === null || typeof current !== "object")
+                return null;
+            if (!Object.prototype.hasOwnProperty.call(current, part)) {
+                if (!create)
+                    return null;
+                current[part] = {};
+            }
+            if (current[part] === null || typeof current[part] !== "object") {
+                if (!create)
+                    return null;
+                throw new TypeError(`"${part}" is not an object`);
+            }
+            current = current[part];
+        }
+        return { parent: current, property };
+    }
+    ;
     set(key, value) {
         const data = this._readData();
-        data[key] = value;
+        const target = this._getParent(data, key, true);
+        if (!target)
+            throw new Error(`Invalid key path: "${key}"`);
+        target.parent[target.property] = value;
         console.log(`Saving data: ${JSON.stringify(data)}`);
         this._writeData(data);
         this._notifyObservers(key, value);
     }
+    ;
     get(key, defaultValue = null) {
         const data = this._readData();
-        return data[key] !== undefined ? data[key] : defaultValue;
+        const value = this._getNested(data, key);
+        return value !== undefined ? value : defaultValue;
     }
+    ;
     delete(key) {
         const data = this._readData();
-        delete data[key];
+        const target = this._getParent(data, key, false);
+        if (!target)
+            return;
+        if (Array.isArray(target.parent) && /^(0|[1-9]\d*)$/.test(target.property)) {
+            target.parent.splice(Number(target.property), 1);
+        }
+        else {
+            delete target.parent[target.property];
+        }
         this._writeData(data);
     }
+    ;
     clear() {
         this._writeData({});
     }
@@ -164,6 +220,27 @@ export class ElectronSave {
         let decrypted = decipher.update(encrypted, "hex", "utf-8");
         decrypted += decipher.final("utf-8");
         return JSON.parse(decrypted);
+    }
+    ;
+    push(key, index, value) {
+        const array = this.get(key, []);
+        if (!Array.isArray(array))
+            throw new TypeError(`"${key}" is not an array`);
+        if (!Number.isInteger(index) || index < 0 || index > array.length)
+            throw new RangeError("Invalid array index");
+        array.splice(index, 0, value);
+        this.set(key, array);
+    }
+    ;
+    pop(key, index) {
+        const array = this.get(key, []);
+        if (!Array.isArray(array))
+            throw new TypeError(`"${key}" is not an array`);
+        if (!Number.isInteger(index) || index < 0 || index >= array.length)
+            return undefined;
+        const [removed] = array.splice(index, 1);
+        this.set(key, array);
+        return removed;
     }
     ;
 }

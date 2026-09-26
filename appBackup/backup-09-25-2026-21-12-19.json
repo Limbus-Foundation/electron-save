@@ -19,24 +19,5 @@
             "id": "PC-B",
             "name": "Notebook"
         }
-    ],
-    "profile": {
-        "username": "rhyan",
-        "preferences": {
-            "language": "pt-BR",
-            "tags": [
-                "first"
-            ]
-        }
-    },
-    "items": [
-        {
-            "id": "3",
-            "name": "Inserted Item"
-        },
-        {
-            "id": "2",
-            "name": "Second Item"
-        }
     ]
 }
